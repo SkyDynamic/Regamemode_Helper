@@ -10,11 +10,13 @@ camera_player = 0
 temp_data_list: dict = {}
 DATA_FILE = 'config/gamemode_helper.json'
 
+
 # Reference Here Plugin
 class Position(NamedTuple):
     x: float
     y: float
     z: float
+
 
 # 这一部分是将 Rcon 返回的数据进行处理
 def process_coordinate(text: str) -> Position:
@@ -23,9 +25,15 @@ def process_coordinate(text: str) -> Position:
     assert len(data) == 3
     return Position(*[float(e[0]) * 10 ** int(e[1]) for e in data])
 
+
+def process_dimension(text: str) -> str:
+    return text.replace(re.match(r'[\w ]+: ', text).group(), '', 1).strip('"\' ')
+
+
 def process_facing(text: str) -> str:
     data = text[1:-1].replace('f', '').split(', ')
     return ' '.join(data)
+
 
 def on_info(server: PluginServerInterface, info: Info):
     global camera_player
@@ -42,11 +50,16 @@ def on_info(server: PluginServerInterface, info: Info):
                 rotation = process_facing(
                     re.search(r'\[.*]', server.rcon_query('data get entity {} Rotation'.format(player_name))).group()
                 )
+                # 维度
+                dimension = process_dimension(
+                    server.rcon_query('data get entity {} Dimension'.format(player_name))
+                )
                 temp_data_list[player_name] = {
                     "x": position.x,
                     "y": position.y,
                     "z": position.z,
-                    "facing": rotation
+                    "facing": rotation,
+                    "dimension": dimension
                 }
                 server.execute("gamemode spectator {}".format(player_name))
             else:
@@ -63,7 +76,8 @@ def on_info(server: PluginServerInterface, info: Info):
             y = player_position['y']
             z = player_position['z']
             facing = player_position['facing']
-            server.execute(f"tp {player_name} {x} {y} {z} {facing}")
+            dimension = player_position['dimension']
+            server.execute(f"execute in {dimension} run tp {player_name} {x} {y} {z} {facing}")
             server.execute(f"gamemode survival {player_name}")
             del temp_data_list[player_name]
 
@@ -71,6 +85,7 @@ def on_info(server: PluginServerInterface, info: Info):
     if not info.is_player and camera_player > 0 and re.match(r'\w+ has the following entity data: ', info.content) is not None:
         name = info.content.split(' ')[0]
         position_str = re.search(r'(?<=Pos: )\[.*?]', info.content).group()
+        dimension = re.search(r'(?<= Dimension: )(.*?),', info.content).group().replace('"', '').replace("'", '').replace(',', '')
         facing_str = re.search(r'(?<=Rotation: )\[.*?]', info.content).group()
         position = process_coordinate(position_str)
         rotation = process_facing(facing_str)
@@ -78,14 +93,25 @@ def on_info(server: PluginServerInterface, info: Info):
             "x": position.x,
             "y": position.y,
             "z": position.z,
-            "facing": rotation
+            "facing": rotation,
+            "dimension": dimension
         }
         server.execute("gamemode spectator {}".format(name))
         camera_player -= 1
 
+
+# 服务器被关闭, 无论是崩溃还是正常关闭
 def on_server_stop(server: PluginServerInterface, server_return_code: int):
     with open(DATA_FILE, 'w', encoding='utf8') as data_file:
         json.dump(temp_data_list, data_file, ensure_ascii=False, indent=2)
+
+
+# 插件被卸载
+def on_unload(server: PluginServerInterface):
+    with open(DATA_FILE, 'w', encoding='utf8') as data_file:
+        json.dump(temp_data_list, data_file, ensure_ascii=False, indent=2)
+
+
 def on_load(server: PluginServerInterface, old):
     global temp_data_list
     if os.path.exists(DATA_FILE) is False:
