@@ -1,0 +1,17 @@
+{
+	"id": "regamemode_helper",
+	"version": "1.0.0",
+	"name": "Regamemode-Helper",
+	"description": {
+		"en_us": "Reproduce camera function of old carpetMod",
+		"zh_cn": "使用MCDR实现旧Carpet的/c/s功能"
+	},
+	"author": [
+		"Sky_Dynamic"
+	],
+	"entrypoint": "regamemode_helper.main",
+	"link": "https://github.com/SkyDynamic/Regamemode_Help",
+	"resources": [
+		"LICENSE"
+	]
+}
