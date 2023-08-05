@@ -1,4 +1,4 @@
-[[English]]((README.md)) [中文]
+[[English]](README.md) [中文]
 
 # Regamemode_Helper Plugin for MCDReforged
 此插件重构自 [Gamemode-Helper](https://github.com/xksnetcbs/MCDR-gamemode_helper-1.16-)
